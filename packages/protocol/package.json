@@ -1,0 +1,21 @@
+{
+  "name": "@mcp-sentinel/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure, I/O-free protocol transformations: tool namespacing, error mapping, and the security pipeline seam.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --force",
+    "clean": "tsc --build --clean"
+  }
+}
