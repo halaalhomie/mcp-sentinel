@@ -44,3 +44,5 @@ out/
 # Local scratch
 tmp/
 .scratch/
+docs/*.pdf
+docs/*.html
