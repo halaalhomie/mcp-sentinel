@@ -1,0 +1,20 @@
+{
+  "name": "@mcp-sentinel/demo-basic-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A minimal, deterministic MCP server used to exercise the gateway in tests. Not for production use.",
+  "main": "./dist/stdio.js",
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --force",
+    "clean": "tsc --build --clean",
+    "start:stdio": "node dist/stdio.js",
+    "start:http": "node dist/http.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.6.0"
+  }
+}
