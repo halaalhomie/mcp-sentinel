@@ -95,14 +95,22 @@ export function createDemoServer(): McpServer {
         })
     );
 
-    // A *protocol* error: the handler throws. The SDK converts this into a
-    // JSON-RPC error response. The gateway must relay the failure without
-    // leaking the upstream's internal detail downstream.
+    // A thrown handler. Verified behaviour (2026-09-10, SDK 2.0.0): McpServer
+    // CATCHES the exception and converts it into an in-band tool execution
+    // error with isError: true, carrying the thrown message as text content.
+    // It does NOT become a JSON-RPC error response.
+    //
+    // Two consequences worth knowing:
+    //  1. A genuine protocol error must be provoked another way — calling an
+    //     unknown tool yields -32602 "Tool <name> not found".
+    //  2. Whatever a handler throws becomes visible to the caller. That is the
+    //     upstream's own disclosure decision; Sentinel relays tool results
+    //     faithfully and does not attempt to launder them.
     server.registerTool(
         'fail_hard',
         {
             title: 'Fail (thrown)',
-            description: 'Always throws, producing a JSON-RPC error response.',
+            description: 'Always throws; the SDK converts this into an in-band isError result.',
             inputSchema: {}
         },
         (): CallToolResult => {
