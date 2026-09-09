@@ -1,0 +1,20 @@
+{
+  "name": "@mcp-sentinel/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The MCP Sentinel gateway: terminates downstream MCP over Streamable HTTP and relays to upstream MCP servers.",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --force",
+    "clean": "tsc --build --clean",
+    "start": "node --enable-source-maps dist/index.js"
+  },
+  "dependencies": {
+    "@mcp-sentinel/protocol": "0.1.0",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0"
+  }
+}
