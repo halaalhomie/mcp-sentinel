@@ -115,16 +115,17 @@ Updated at checkpoint C4.
 | C4 | Tool registry + namespaced `tools/list` | ✅ |
 | C5 | `tools/call` relay | ✅ |
 | C6 | HTTP listener + bootstrap | ✅ |
-| C7 | End-to-end integration tests | 🟡 In progress |
-| C8 | Upstream HTTP transport | ⬜ |
-| C9 | Conformance guide + CI | ⬜ |
+| C7 | End-to-end integration + resilience tests | ✅ |
+| C8 | Upstream HTTP transport | ✅ (verified with C7) |
+| C9 | Conformance guide + CI | 🟡 In progress |
 
 ### What works today
 
 - Pure protocol layer: injective tool namespacing, error taxonomy, sanitised client-facing errors
 - Operator configuration parsing with fail-fast validation
 - Structured JSON logging with correlation IDs
-- Upstream MCP client over **stdio**, with error translation and timeout handling
+- Upstream MCP client over **stdio and Streamable HTTP**, with error translation and timeouts
+- Failure isolation: an upstream that never starts, or dies mid-flight, does not affect the others
 - Tool registry: discovery across multiple upstreams, alias namespacing, exclusion of malformed tools
 - `tools/list` over MCP: aggregated, namespaced, filtered through the security pipeline seam
 - `tools/call` over MCP: routed by exact lookup, evaluated by the pipeline **before** any upstream
@@ -132,7 +133,7 @@ Updated at checkpoint C4.
 - A **runnable gateway process**: Streamable HTTP listener, DNS-rebinding guards,
   `/healthz` and `/readyz`, schema warm-up, graceful shutdown
 - A real demo MCP server used as an integration-test fixture
-- **132 tests passing**
+- **166 tests passing**
 
 ### What does not work yet
 
@@ -140,6 +141,7 @@ Updated at checkpoint C4.
 - ❌ No authentication of downstream callers (Phase 11)
 - ❌ `resources/*` and `prompts/*` are not proxied (deliberate; see OD-4)
 - ❌ Conformance is not yet wired into CI (C9)
+- ❌ Request body size and depth are not bounded (belongs with `inputSchema` validation, Phase 3)
 - ❌ No enforcement of any kind
 - ❌ No authentication of downstream callers
 - ❌ No audit persistence
@@ -314,8 +316,10 @@ npm run typecheck     # type-checks every workspace AND the tests tree
 | `gateway/config` | 27 | Unit + adversarial |
 | `gateway/gateway` | 25 | Integration (two real upstreams, in-memory transport) |
 | `gateway/http` | 15 | End-to-end over real HTTP (the only suite exercising protocol-era negotiation) |
+| `gateway/registry` | 16 | Validation of malformed upstream metadata |
+| `gateway/resilience` | 18 | Failure paths: dead upstreams, malformed requests, aborts |
 | `gateway/upstream` | 12 | Integration (real MCP server over stdio) |
-| **Total** | **132** | |
+| **Total** | **166** | |
 
 Suites named `security invariant: …` assert a specific security property. They are meant to
 be greppable and hard to delete casually.
