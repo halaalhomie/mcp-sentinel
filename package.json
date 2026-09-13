@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gateway": "node --enable-source-maps apps/gateway/dist/index.js",
+    "gateway:demo": "node --enable-source-maps apps/gateway/dist/index.js sentinel.config.example.json",
     "conformance": "node scripts/conformance.mjs"
   },
   "devDependencies": {

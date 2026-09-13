@@ -114,8 +114,8 @@ Updated at checkpoint C4.
 | C3 | Upstream stdio client | ✅ |
 | C4 | Tool registry + namespaced `tools/list` | ✅ |
 | C5 | `tools/call` relay | ✅ |
-| C6 | HTTP listener + bootstrap | 🟡 In progress |
-| C7 | End-to-end integration tests | ⬜ |
+| C6 | HTTP listener + bootstrap | ✅ |
+| C7 | End-to-end integration tests | 🟡 In progress |
 | C8 | Upstream HTTP transport | ⬜ |
 | C9 | Conformance guide + CI | ⬜ |
 
@@ -129,13 +129,17 @@ Updated at checkpoint C4.
 - `tools/list` over MCP: aggregated, namespaced, filtered through the security pipeline seam
 - `tools/call` over MCP: routed by exact lookup, evaluated by the pipeline **before** any upstream
   contact, relayed unmodified — including in-band `isError` results
+- A **runnable gateway process**: Streamable HTTP listener, DNS-rebinding guards,
+  `/healthz` and `/readyz`, schema warm-up, graceful shutdown
 - A real demo MCP server used as an integration-test fixture
-- **117 tests passing**
+- **132 tests passing**
 
 ### What does not work yet
 
-- ❌ There is no runnable gateway process (no HTTP listener, no bootstrap)
+- ❌ No enforcement — the active pipeline allows everything, and says so at startup
+- ❌ No authentication of downstream callers (Phase 11)
 - ❌ `resources/*` and `prompts/*` are not proxied (deliberate; see OD-4)
+- ❌ Conformance is not yet wired into CI (C9)
 - ❌ No enforcement of any kind
 - ❌ No authentication of downstream callers
 - ❌ No audit persistence
@@ -163,11 +167,36 @@ npm run build
 npm test
 ```
 
-Expected: **90 tests passing across 5 files.**
+Expected: **132 tests passing across 7 files.**
 
-> There is no `npm start` yet — the gateway has no entry point until checkpoint C6.
-> The integration tests spawn the demo MCP server as a real child process, so they are the
-> current way to see the system actually speak MCP.
+### Run the gateway
+
+```bash
+npm run build
+npm run gateway:demo     # uses sentinel.config.example.json — two demo upstreams
+```
+
+It starts on `http://127.0.0.1:8080/mcp` and logs, deliberately loudly:
+
+```json
+{"level":"warn","msg":"gateway is NOT enforcing","pipeline":"pass-through",
+ "enforcing":false,"note":"Phase 1 ships no enforcement. Every tool call is allowed."}
+```
+
+Point any MCP client at it, or inspect it:
+
+```bash
+npx @modelcontextprotocol/inspector          # then connect to http://127.0.0.1:8080/mcp
+curl -s http://127.0.0.1:8080/healthz        # liveness
+curl -s http://127.0.0.1:8080/readyz         # can it actually serve?
+```
+
+To run against your own servers, copy `sentinel.config.example.json` and pass its path:
+
+```bash
+node apps/gateway/dist/index.js ./my-config.json
+# or: SENTINEL_CONFIG=./my-config.json npm run gateway
+```
 
 ### Running the demo MCP server standalone
 
@@ -212,7 +241,9 @@ mcp-sentinel/
 │           ├── logging.ts      # structured logging
 │           ├── upstream.ts     # upstream MCP client
 │           ├── registry.ts     # routing table — exact lookup, never string parsing
-│           └── gateway.ts      # downstream MCP server face
+│           ├── gateway.ts      # downstream MCP server face
+│           ├── http.ts         # Streamable HTTP listener + rebinding guards
+│           └── index.ts        # bootstrap: config → pool → registry → warm-up → listen
 │
 ├── servers/demo/
 │   └── basic-server/       # a real MCP server used as a test fixture (never published)
@@ -282,8 +313,9 @@ npm run typecheck     # type-checks every workspace AND the tests tree
 | `protocol/pipeline` | 4 | Unit |
 | `gateway/config` | 27 | Unit + adversarial |
 | `gateway/gateway` | 25 | Integration (two real upstreams, in-memory transport) |
+| `gateway/http` | 15 | End-to-end over real HTTP (the only suite exercising protocol-era negotiation) |
 | `gateway/upstream` | 12 | Integration (real MCP server over stdio) |
-| **Total** | **117** | |
+| **Total** | **132** | |
 
 Suites named `security invariant: …` assert a specific security property. They are meant to
 be greppable and hard to delete casually.

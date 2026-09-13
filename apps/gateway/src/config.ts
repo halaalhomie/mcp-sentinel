@@ -16,7 +16,23 @@ export interface ListenConfig {
     readonly host: string;
     readonly port: number;
     readonly path: string;
+    /**
+     * Hostnames accepted in the `Host` header.
+     *
+     * The MCP specification requires servers to guard against DNS rebinding,
+     * where a page the attacker controls resolves a hostname they own to a
+     * loopback address and then drives a locally-bound MCP server from the
+     * victim's browser. Defaults to loopback only; a deployment bound to a
+     * real interface must name its hostnames explicitly rather than widening
+     * this implicitly.
+     */
+    readonly allowedHosts: readonly string[];
+    /** Hostnames accepted in the `Origin` header. Same rationale. */
+    readonly allowedOrigins: readonly string[];
 }
+
+/** Loopback names, used as the default allowlist for both guards. */
+export const LOOPBACK_HOSTNAMES = ['localhost', '127.0.0.1', '[::1]'] as const;
 
 export interface GatewayConfig {
     readonly listen: ListenConfig;
@@ -171,11 +187,26 @@ export function parseConfig(raw: unknown): GatewayConfig {
         throw new ConfigError('logLevel must be debug, info, warn or error');
     }
 
+    const parseHostList = (value: unknown, field: string): readonly string[] => {
+        if (value === undefined) return LOOPBACK_HOSTNAMES;
+        if (!Array.isArray(value) || value.some((v) => typeof v !== 'string' || v.length === 0)) {
+            throw new ConfigError(`listen.${field} must be an array of non-empty strings`);
+        }
+        if (value.length === 0) {
+            // An empty allowlist would reject every request with a Host header,
+            // which is a confusing way to be broken. Say so instead.
+            throw new ConfigError(`listen.${field} must not be empty; omit it to default to loopback`);
+        }
+        return value as string[];
+    };
+
     return {
         listen: {
             host: typeof listenRaw['host'] === 'string' ? listenRaw['host'] : '127.0.0.1',
             port,
-            path: typeof listenRaw['path'] === 'string' ? listenRaw['path'] : '/mcp'
+            path: typeof listenRaw['path'] === 'string' ? listenRaw['path'] : '/mcp',
+            allowedHosts: parseHostList(listenRaw['allowedHosts'], 'allowedHosts'),
+            allowedOrigins: parseHostList(listenRaw['allowedOrigins'], 'allowedOrigins')
         },
         upstreams,
         upstreamRequestTimeoutMs: timeout,

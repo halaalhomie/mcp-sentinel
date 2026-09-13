@@ -1,0 +1,37 @@
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "path": "/mcp",
+    "allowedHosts": ["localhost", "127.0.0.1", "[::1]"],
+    "allowedOrigins": ["localhost", "127.0.0.1", "[::1]"]
+  },
+
+  "upstreamRequestTimeoutMs": 30000,
+  "logLevel": "info",
+
+  "upstreams": [
+    {
+      "id": "srv-alpha",
+      "alias": "alpha",
+      "transport": {
+        "kind": "stdio",
+        "command": "node",
+        "args": ["servers/demo/basic-server/dist/stdio.js"]
+      },
+      "trustTier": "VERIFIED",
+      "environment": "dev"
+    },
+    {
+      "id": "srv-beta",
+      "alias": "beta",
+      "transport": {
+        "kind": "stdio",
+        "command": "node",
+        "args": ["servers/demo/basic-server/dist/stdio.js"]
+      },
+      "trustTier": "UNTRUSTED",
+      "environment": "dev"
+    }
+  ]
+}
