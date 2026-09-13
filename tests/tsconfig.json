@@ -1,0 +1,24 @@
+{
+  // Type-checks the test tree.
+  //
+  // The workspace tsconfigs each cover only their own `src`, so until this
+  // existed no test file was type-checked by anything. `vitest` transpiles
+  // without checking types, so a test could reference a property that does not
+  // exist and still pass — which is exactly what happened: `cache: 'bypass'`
+  // was silently ignored for several commits because the real option is
+  // `cacheMode`.
+  //
+  // `noEmit` with no `composite` keeps this a pure checking pass; TypeScript
+  // follows the relative imports into `apps/` and `packages/` and checks those
+  // sources in the same run.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": false,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"]
+}

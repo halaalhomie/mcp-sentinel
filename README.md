@@ -113,8 +113,8 @@ Updated at checkpoint C4.
 | C2 | Gateway config parsing + structured logging | ✅ |
 | C3 | Upstream stdio client | ✅ |
 | C4 | Tool registry + namespaced `tools/list` | ✅ |
-| C5 | `tools/call` relay | 🟡 In progress |
-| C6 | HTTP listener + bootstrap | ⬜ |
+| C5 | `tools/call` relay | ✅ |
+| C6 | HTTP listener + bootstrap | 🟡 In progress |
 | C7 | End-to-end integration tests | ⬜ |
 | C8 | Upstream HTTP transport | ⬜ |
 | C9 | Conformance guide + CI | ⬜ |
@@ -127,13 +127,14 @@ Updated at checkpoint C4.
 - Upstream MCP client over **stdio**, with error translation and timeout handling
 - Tool registry: discovery across multiple upstreams, alias namespacing, exclusion of malformed tools
 - `tools/list` over MCP: aggregated, namespaced, filtered through the security pipeline seam
+- `tools/call` over MCP: routed by exact lookup, evaluated by the pipeline **before** any upstream
+  contact, relayed unmodified — including in-band `isError` results
 - A real demo MCP server used as an integration-test fixture
-- **106 tests passing**
+- **117 tests passing**
 
 ### What does not work yet
 
 - ❌ There is no runnable gateway process (no HTTP listener, no bootstrap)
-- ❌ `tools/call` is not relayed yet — it returns method-not-found
 - ❌ `resources/*` and `prompts/*` are not proxied (deliberate; see OD-4)
 - ❌ No enforcement of any kind
 - ❌ No authentication of downstream callers
@@ -267,7 +268,12 @@ These are enforced by code and tests, not merely stated.
 ```bash
 npm test              # all suites
 npm run test:watch    # watch mode
+npm run typecheck     # type-checks every workspace AND the tests tree
 ```
+
+> `vitest` transpiles without type-checking, so `npm test` alone cannot catch a
+> test that references a property which does not exist. `npm run typecheck` covers the
+> `tests/` tree via `tests/tsconfig.json` and is the only thing that will.
 
 | Suite | Tests | Kind |
 |---|---|---|
@@ -275,9 +281,9 @@ npm run test:watch    # watch mode
 | `protocol/errors` | 12 | Unit + adversarial |
 | `protocol/pipeline` | 4 | Unit |
 | `gateway/config` | 27 | Unit + adversarial |
-| `gateway/gateway` | 14 | Integration (two real upstreams, in-memory transport) |
+| `gateway/gateway` | 25 | Integration (two real upstreams, in-memory transport) |
 | `gateway/upstream` | 12 | Integration (real MCP server over stdio) |
-| **Total** | **106** | |
+| **Total** | **117** | |
 
 Suites named `security invariant: …` assert a specific security property. They are meant to
 be greppable and hard to delete casually.

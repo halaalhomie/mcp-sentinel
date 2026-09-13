@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p tests --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "gateway": "node --enable-source-maps apps/gateway/dist/index.js",
