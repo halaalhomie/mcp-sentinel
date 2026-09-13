@@ -29,6 +29,25 @@ describe('security invariant: error code allocation', () => {
     });
 });
 
+describe('SentinelError wire contract', () => {
+    // Verified against SDK 2.0.0 on 2026-09-14: when a request handler throws,
+    // the SDK serialises `code` and `data` off the thrown value into the
+    // JSON-RPC error response. A property named only `details` is dropped and
+    // the caller receives `data: undefined`. The alias is what makes structured
+    // detail actually reach a caller, so it is asserted here rather than
+    // trusted to survive a refactor.
+    it('exposes details as data for SDK serialisation', () => {
+        const error = new SentinelError(SentinelErrorCode.UPSTREAM_TIMEOUT, 'timed out', { serverAlias: 'docs' });
+
+        expect(error.data).toEqual({ serverAlias: 'docs' });
+        expect(error.data).toBe(error.details);
+    });
+
+    it('defaults data to an empty object rather than undefined', () => {
+        expect(new SentinelError(SentinelErrorCode.UPSTREAM_UNAVAILABLE, 'gone').data).toEqual({});
+    });
+});
+
 describe('toClientFacingError', () => {
     it('passes through a SentinelError message and details', () => {
         const error = new SentinelError(SentinelErrorCode.UPSTREAM_TIMEOUT, 'The upstream server did not respond in time.', {

@@ -87,7 +87,7 @@ isolation is a deployment responsibility and is outside Sentinel's power to guar
 
 ## Current status
 
-Updated at commit `53fe164`.
+Updated at checkpoint C4.
 
 | Phase | Deliverable | Status |
 |---|---|---|
@@ -112,8 +112,8 @@ Updated at commit `53fe164`.
 | C1 | Demo MCP server (stdio + Streamable HTTP) | ✅ |
 | C2 | Gateway config parsing + structured logging | ✅ |
 | C3 | Upstream stdio client | ✅ |
-| C4 | Tool registry + namespaced `tools/list` | 🟡 In progress |
-| C5 | `tools/call` relay | ⬜ |
+| C4 | Tool registry + namespaced `tools/list` | ✅ |
+| C5 | `tools/call` relay | 🟡 In progress |
 | C6 | HTTP listener + bootstrap | ⬜ |
 | C7 | End-to-end integration tests | ⬜ |
 | C8 | Upstream HTTP transport | ⬜ |
@@ -125,12 +125,16 @@ Updated at commit `53fe164`.
 - Operator configuration parsing with fail-fast validation
 - Structured JSON logging with correlation IDs
 - Upstream MCP client over **stdio**, with error translation and timeout handling
+- Tool registry: discovery across multiple upstreams, alias namespacing, exclusion of malformed tools
+- `tools/list` over MCP: aggregated, namespaced, filtered through the security pipeline seam
 - A real demo MCP server used as an integration-test fixture
-- **90 tests passing**
+- **106 tests passing**
 
 ### What does not work yet
 
-- ❌ There is no runnable gateway process (no HTTP listener, no `tools/list`, no `tools/call` relay)
+- ❌ There is no runnable gateway process (no HTTP listener, no bootstrap)
+- ❌ `tools/call` is not relayed yet — it returns method-not-found
+- ❌ `resources/*` and `prompts/*` are not proxied (deliberate; see OD-4)
 - ❌ No enforcement of any kind
 - ❌ No authentication of downstream callers
 - ❌ No audit persistence
@@ -205,14 +209,16 @@ mcp-sentinel/
 │       └── src/
 │           ├── config.ts       # operator configuration (only trusted identity source)
 │           ├── logging.ts      # structured logging
-│           └── upstream.ts     # upstream MCP client
+│           ├── upstream.ts     # upstream MCP client
+│           ├── registry.ts     # routing table — exact lookup, never string parsing
+│           └── gateway.ts      # downstream MCP server face
 │
 ├── servers/demo/
 │   └── basic-server/       # a real MCP server used as a test fixture (never published)
 │
 └── tests/
-    ├── protocol/           # 51 unit + property tests
-    └── gateway/            # 39 unit + integration tests
+    ├── protocol/           # 53 unit + property tests
+    └── gateway/            # 53 unit + integration tests
 ```
 
 ### The dependency direction is the important part
@@ -266,11 +272,12 @@ npm run test:watch    # watch mode
 | Suite | Tests | Kind |
 |---|---|---|
 | `protocol/naming` | 37 | Unit + property |
-| `protocol/errors` | 10 | Unit + adversarial |
+| `protocol/errors` | 12 | Unit + adversarial |
 | `protocol/pipeline` | 4 | Unit |
 | `gateway/config` | 27 | Unit + adversarial |
+| `gateway/gateway` | 14 | Integration (two real upstreams, in-memory transport) |
 | `gateway/upstream` | 12 | Integration (real MCP server over stdio) |
-| **Total** | **90** | |
+| **Total** | **106** | |
 
 Suites named `security invariant: …` assert a specific security property. They are meant to
 be greppable and hard to delete casually.

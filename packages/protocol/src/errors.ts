@@ -72,12 +72,27 @@ export class SentinelError extends Error {
     readonly publicMessage: string;
     readonly details: Readonly<Record<string, unknown>>;
 
+    /**
+     * The JSON-RPC `error.data` payload.
+     *
+     * Verified against SDK 2.0.0 on 2026-09-14: when a request handler throws,
+     * the SDK reads `code` and `data` off the thrown value and serialises them
+     * into the JSON-RPC error response. A property named anything else — such
+     * as `details` alone — is silently dropped, and the caller receives
+     * `data: undefined`.
+     *
+     * This is therefore an alias of {@link details}, not a second source of
+     * truth: whatever a caller is told is exactly what was recorded.
+     */
+    readonly data: Readonly<Record<string, unknown>>;
+
     constructor(code: number, publicMessage: string, details: Readonly<Record<string, unknown>> = {}, options?: { cause?: unknown }) {
         super(publicMessage, options);
         this.name = 'SentinelError';
         this.code = code;
         this.publicMessage = publicMessage;
         this.details = details;
+        this.data = details;
     }
 }
 
