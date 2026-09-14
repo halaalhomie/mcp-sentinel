@@ -187,28 +187,31 @@ export function createSentinelServer(deps: GatewayDeps): Server {
         return result;
     });
 
-    /**
-     * Anything Sentinel does not explicitly serve.
+    /*
+     * There is deliberately NO `fallbackRequestHandler`.
      *
-     * Verified against SDK 2.0.0: an unhandled method already yields `-32601`
-     * without this handler, so the fallback exists for observability — an
-     * unexpected method arriving at the gateway is worth a log line — and to
-     * name the method in the message rather than returning a bare
-     * "Method not found".
+     * An earlier version installed one to log unsupported methods and name the
+     * method in the error. Differential conformance caught what that cost:
+     * the check `sep-2575-http-server-method-not-found-404` passed against the
+     * upstream directly and FAILED through Sentinel.
      *
-     * `resources/*` and `prompts/*` are deliberately NOT proxied yet
-     * (ARCHITECTURE.md OD-4). Answering method-not-found is honest; silently
-     * relaying them would expose an unpoliced surface, and a resource read can
-     * exfiltrate as effectively as a tool call.
+     * The cause is that the SDK distinguishes "no handler is registered for
+     * this method" from "a handler ran and threw". The first produces
+     * `404 Not Found` with JSON-RPC `-32601`, which is what the specification
+     * requires of a server that does not implement a method. The second
+     * produces `200` carrying a JSON-RPC error. Installing a fallback turned
+     * every unimplemented method into the second case.
+     *
+     * Leaving the method unregistered restores the required behaviour. The lost
+     * log line is not worth a spec violation, and the gateway was never
+     * depending on the fallback for correctness — verified separately against
+     * SDK 2.0.0, an unhandled method already yields `-32601` on its own.
+     *
+     * `resources/*` and `prompts/*` therefore answer method-not-found, which is
+     * the honest response while they are unpoliced (ARCHITECTURE.md OD-4): a
+     * resource read can exfiltrate as effectively as a tool call, so silently
+     * relaying them would expose a surface nothing is checking.
      */
-    server.fallbackRequestHandler = (request) => {
-        logger.warn('unsupported method', { method: request.method });
-        return Promise.reject(
-            new SentinelError(JsonRpcErrorCode.METHOD_NOT_FOUND, `Method not supported by this gateway: ${echoSafe(request.method)}`, {
-                method: request.method
-            })
-        );
-    };
 
     return server;
 }

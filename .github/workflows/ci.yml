@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A superseded run on the same branch has nothing left to tell us.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build, typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` rather than `npm install`: it installs exactly what the
+      # lockfile pins and fails if the lockfile and manifest disagree, so CI
+      # cannot quietly test a different dependency tree than a developer does.
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Covers the tests/ tree as well as every workspace. vitest transpiles
+      # without checking types, so this is the only step that can catch a test
+      # asserting against a property that does not exist.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+  conformance:
+    name: Differential MCP conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only worth running against a tree that already builds and passes tests.
+    needs: verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The harness runs the built gateway and the built demo server as real
+      # child processes, so both must exist before it starts.
+      - name: Build
+        run: npm run build
+
+      # Runs the official suite twice against the same upstream — once directly,
+      # once through Sentinel — and compares every check by (id, status). Any
+      # divergence that is not declared in EXPECTED_DIVERGENCE, with a reason,
+      # fails the build. See docs/CONFORMANCE.md.
+      - name: Differential conformance
+        run: npm run conformance
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Advisory for now: this project's subject matter is supply-chain risk in
+      # the MCP ecosystem, so a visible audit belongs in CI. It is not yet
+      # blocking because the SDK's own transitive tree is outside our control
+      # and a failure there should not stop work on the gateway.
+      - name: Audit
+        run: npm audit --audit-level=high
+        continue-on-error: true

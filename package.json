@@ -24,6 +24,7 @@
     "conformance": "node scripts/conformance.mjs"
   },
   "devDependencies": {
+    "@modelcontextprotocol/conformance": "0.2.0-alpha.11",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

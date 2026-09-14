@@ -362,15 +362,18 @@ describe('unsupported methods', () => {
         await expect(client.request({ method, params: {} } as never)).rejects.toMatchObject({ code: -32601 });
     });
 
-    it('names the rejected method in the error data', async () => {
+    it('uses the SDK native method-not-found path rather than a fallback handler', async () => {
+        // The gateway deliberately registers no fallbackRequestHandler. The SDK
+        // distinguishes "no handler registered" (404 + -32601, which the spec
+        // requires) from "a handler threw" (200 + JSON-RPC error). A fallback
+        // turned every unimplemented method into the second case and failed the
+        // conformance check sep-2575-http-server-method-not-found-404.
         const error = (await client.request({ method: 'resources/list', params: {} } as never).catch((e: unknown) => e)) as {
             code: number;
-            data?: { method?: string };
+            message?: string;
         };
 
         expect(error.code).toBe(-32601);
-        // Verified against SDK 2.0.0: a thrown handler error propagates `code`
-        // and `data`, so structured detail reaches the caller.
-        expect(error.data?.method).toBe('resources/list');
+        expect(error.message).toMatch(/method not found/i);
     });
 });

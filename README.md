@@ -92,7 +92,7 @@ Updated at checkpoint C4.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 0 | Architecture, threat model, SDK research | ✅ Complete |
-| 1 | Transparent MCP gateway | 🟡 **In progress** |
+| 1 | Transparent MCP gateway | ✅ Complete |
 | 2 | Tool registry + manifest integrity | ⬜ Not started |
 | 3 | Deterministic risk engine | ⬜ Not started |
 | 4 | Policy engine | ⬜ Not started |
@@ -117,7 +117,7 @@ Updated at checkpoint C4.
 | C6 | HTTP listener + bootstrap | ✅ |
 | C7 | End-to-end integration + resilience tests | ✅ |
 | C8 | Upstream HTTP transport | ✅ (verified with C7) |
-| C9 | Conformance guide + CI | 🟡 In progress |
+| C9 | Conformance guide + CI | ✅ |
 
 ### What works today
 
@@ -140,8 +140,8 @@ Updated at checkpoint C4.
 - ❌ No enforcement — the active pipeline allows everything, and says so at startup
 - ❌ No authentication of downstream callers (Phase 11)
 - ❌ `resources/*` and `prompts/*` are not proxied (deliberate; see OD-4)
-- ❌ Conformance is not yet wired into CI (C9)
 - ❌ Request body size and depth are not bounded (belongs with `inputSchema` validation, Phase 3)
+- ❌ `subscriptions/listen` is not relayed, so `tools.listChanged` is not advertised
 - ❌ No enforcement of any kind
 - ❌ No authentication of downstream callers
 - ❌ No audit persistence
@@ -331,17 +331,27 @@ code comments originally assumed.
 
 ### Conformance
 
-The official [MCP conformance suite](https://github.com/modelcontextprotocol/conformance)
-is not yet wired into CI (checkpoint C9). **No conformance claim is made until it passes.**
+```bash
+npm run build && npm run conformance
+```
 
-Two findings already recorded in [`docs/SDK_RESEARCH.md` §7](docs/SDK_RESEARCH.md):
+"Sentinel passes the conformance suite" is **not directly measurable** — the official suite
+expects fixture tools it does not ship a server for, and a proxy can only be as conformant as
+what is behind it. So the suite is run **twice against the same upstream**, once directly and
+once through Sentinel, and every check compared by `(id, status)`:
 
-- The `--requirements 2026-07-28` flag exists only in the `0.2.0-alpha` line; the `latest`
-  release (`0.1.16`) rejects the version outright.
-- The suite expects the server under test to expose specific fixture tools and ships no
-  reference server — so conformance will be measured **differentially**: run the suite
-  against an upstream directly, then against Sentinel proxying that upstream, and assert the
-  results are identical. Any divergence is a transparency defect introduced by Sentinel.
+```
+Checks compared : 166
+Identical       : 165
+Explained diffs : 1
+Unexplained     : 0
+
+PASS: Sentinel did not change any observable protocol behaviour.
+```
+
+Any divergence is, by construction, a defect Sentinel introduced. This runs in CI and is
+blocking. Full detail, including the one declared divergence and a real bug this caught,
+is in [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
 
 ---
 
@@ -351,6 +361,7 @@ Two findings already recorded in [`docs/SDK_RESEARCH.md` §7](docs/SDK_RESEARCH.
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The specification. Problem definition, threat model (STRIDE), trust boundaries, component architecture, request lifecycle, policy and risk design, manifest integrity, approval binding, audit model, failure matrix, testing strategy, roadmap, open decisions. |
 | [`docs/SDK_RESEARCH.md`](docs/SDK_RESEARCH.md) | Verified MCP SDK API surface. Every signature read from shipped type declarations rather than recalled. Resolves open decision OD-1. |
+| [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md) | How protocol transparency is measured, the current result, declared divergences, limitations, and the bug differential conformance caught. |
 
 ---
 
